@@ -90,6 +90,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.AspNetCore.Server
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuicSampleClient", "samples\QuicSampleClient\QuicSampleClient.csproj", "{F39A942B-85A8-4C1B-A5BC-435555E79F20}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "QuicSampleApp", "samples\QuicSampleApp\QuicSampleApp.csproj", "{38CD42D1-911D-49FF-97AB-8750FFBB4365}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

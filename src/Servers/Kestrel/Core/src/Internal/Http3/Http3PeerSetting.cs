@@ -5,5 +5,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http3
 {
     internal class Http3PeerSetting
     {
+        internal const uint DefaultMaxFrameSize = 16 * 1024;
+
+        public static int MinAllowedMaxFrameSize { get; internal set; } = 16 * 1024;
     }
 }

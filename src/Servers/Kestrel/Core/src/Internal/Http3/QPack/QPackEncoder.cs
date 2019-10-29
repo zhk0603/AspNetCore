@@ -316,12 +316,15 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http3.QPack
             }
         }
 
+        // TODO these are fairly hard coded for the first two bytes to be zero.
         public bool BeginEncode(IEnumerable<KeyValuePair<string, string>> headers, Span<byte> buffer, out int length)
         {
             _enumerator = headers.GetEnumerator();
             _enumerator.MoveNext();
+            buffer[0] = 0;
+            buffer[1] = 0;
 
-            return Encode(buffer, out length);
+            return Encode(buffer.Slice(2), out length);
         }
 
         public bool BeginEncode(int statusCode, IEnumerable<KeyValuePair<string, string>> headers, Span<byte> buffer, out int length)

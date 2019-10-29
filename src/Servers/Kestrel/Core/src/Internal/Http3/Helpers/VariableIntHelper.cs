@@ -91,7 +91,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http3
             }
         }
 
-        // returns length of int
+        public static int WriteEncodedIntegerToMemory(Memory<byte> buffer, long longToEncode)
+        {
+            return WriteEncodedIntegerToSpan(buffer.Span, longToEncode);
+        }
+
         public static int WriteEncodedIntegerToSpan(Span<byte> buffer, long longToEncode)
         {
             // TODO we should maybe make these longs eventually.

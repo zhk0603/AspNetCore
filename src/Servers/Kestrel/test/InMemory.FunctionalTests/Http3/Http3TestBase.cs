@@ -316,7 +316,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
             public ReadOnlySequence<byte> PayloadSequence => new ReadOnlySequence<byte>(Payload);
         }
 
-
         internal class Http3ControlStream : Http3StreamBase, IUnidirectionalStreamFeature
         {
             internal ConnectionContext ConnectionContext { get; }

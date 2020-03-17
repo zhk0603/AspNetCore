@@ -133,6 +133,7 @@ namespace Microsoft.Net.Http.Headers
         public static readonly string AccessControlRequestMethod;
         public static readonly string Age;
         public static readonly string Allow;
+        public static readonly string AltSvc;
         public static readonly string Authority;
         public static readonly string Authorization;
         public static readonly string CacheControl;
@@ -199,6 +200,7 @@ namespace Microsoft.Net.Http.Headers
         public static readonly string WebSocketSubProtocols;
         public static readonly string WWWAuthenticate;
         public static readonly string XFrameOptions;
+        public static readonly string XRequestedWith;
     }
     public static partial class HeaderQuality
     {

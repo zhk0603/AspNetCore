@@ -15,6 +15,7 @@ namespace Microsoft.AspNetCore.Identity
     public partial class ClaimsIdentityOptions
     {
         public ClaimsIdentityOptions() { }
+        public string EmailClaimType { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
         public string RoleClaimType { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
         public string SecurityStampClaimType { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
         public string UserIdClaimType { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
@@ -57,6 +58,7 @@ namespace Microsoft.AspNetCore.Identity
         public virtual Microsoft.AspNetCore.Identity.IdentityBuilder AddRoleValidator<TRole>() where TRole : class { throw null; }
         public virtual Microsoft.AspNetCore.Identity.IdentityBuilder AddTokenProvider(string providerName, System.Type provider) { throw null; }
         public virtual Microsoft.AspNetCore.Identity.IdentityBuilder AddTokenProvider<TProvider>(string providerName) where TProvider : class { throw null; }
+        public virtual Microsoft.AspNetCore.Identity.IdentityBuilder AddUserConfirmation<TUserConfirmation>() where TUserConfirmation : class { throw null; }
         public virtual Microsoft.AspNetCore.Identity.IdentityBuilder AddUserManager<TUserManager>() where TUserManager : class { throw null; }
         public virtual Microsoft.AspNetCore.Identity.IdentityBuilder AddUserStore<TStore>() where TStore : class { throw null; }
         public virtual Microsoft.AspNetCore.Identity.IdentityBuilder AddUserValidator<TValidator>() where TValidator : class { throw null; }
@@ -575,7 +577,7 @@ namespace Microsoft.AspNetCore.Identity
         public virtual System.Threading.Tasks.Task<int> GetAccessFailedCountAsync(TUser user) { throw null; }
         public virtual System.Threading.Tasks.Task<string> GetAuthenticationTokenAsync(TUser user, string loginProvider, string tokenName) { throw null; }
         public virtual System.Threading.Tasks.Task<string> GetAuthenticatorKeyAsync(TUser user) { throw null; }
-        protected static string GetChangeEmailTokenPurpose(string newEmail) { throw null; }
+        public static string GetChangeEmailTokenPurpose(string newEmail) { throw null; }
         [System.Diagnostics.DebuggerStepThroughAttribute]
         public virtual System.Threading.Tasks.Task<System.Collections.Generic.IList<System.Security.Claims.Claim>> GetClaimsAsync(TUser user) { throw null; }
         [System.Diagnostics.DebuggerStepThroughAttribute]

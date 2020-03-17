@@ -275,7 +275,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal
                             {
                                 if (descriptor.OriginalParameterTypes[parameterPointer] == typeof(CancellationToken))
                                 {
-                                    cts = CancellationTokenSource.CreateLinkedTokenSource(connection.ConnectionAborted, default);
+                                    cts = CancellationTokenSource.CreateLinkedTokenSource(connection.ConnectionAborted);
                                     arguments[parameterPointer] = cts.Token;
                                 }
                                 else if (isStreamCall && ReflectionHelper.IsStreamingType(descriptor.OriginalParameterTypes[parameterPointer], mustBeDirectType: true))
@@ -308,7 +308,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal
                             return;
                         }
 
-                        cts = cts ?? CancellationTokenSource.CreateLinkedTokenSource(connection.ConnectionAborted, default);
+                        cts = cts ?? CancellationTokenSource.CreateLinkedTokenSource(connection.ConnectionAborted);
                         connection.ActiveRequestCancellationSources.TryAdd(hubMethodInvocationMessage.InvocationId, cts);
                         var enumerable = descriptor.FromReturnedStream(result, cts.Token);
 
@@ -489,7 +489,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal
         private Task<bool> IsHubMethodAuthorized(IServiceProvider provider, HubConnectionContext hubConnectionContext, IList<IAuthorizeData> policies, string hubMethodName, object[] hubMethodArguments)
         {
             // If there are no policies we don't need to run auth
-            if (!policies.Any())
+            if (policies.Count == 0)
             {
                 return TaskCache.True;
             }

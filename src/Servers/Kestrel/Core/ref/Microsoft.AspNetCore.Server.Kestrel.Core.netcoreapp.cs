@@ -77,6 +77,12 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         public int MaxRequestHeaderFieldSize { get { throw null; } set { } }
         public int MaxStreamsPerConnection { get { throw null; } set { } }
     }
+    public partial class Http3Limits
+    {
+        public Http3Limits() { }
+        public int HeaderTableSize { get { throw null; } set { } }
+        public int MaxRequestHeaderFieldSize { get { throw null; } set { } }
+    }
     [System.FlagsAttribute]
     public enum HttpProtocols
     {
@@ -84,10 +90,13 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         Http1 = 1,
         Http2 = 2,
         Http1AndHttp2 = 3,
+        Http3 = 4,
+        Http1AndHttp2AndHttp3 = 7,
     }
     public partial class KestrelServer : Microsoft.AspNetCore.Hosting.Server.IServer, System.IDisposable
     {
-        public KestrelServer(Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions> options, Microsoft.AspNetCore.Connections.IConnectionListenerFactory transportFactory, Microsoft.Extensions.Logging.ILoggerFactory loggerFactory) { }
+        public KestrelServer(Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions> options, System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Connections.IConnectionListenerFactory> transportFactories, Microsoft.Extensions.Logging.ILoggerFactory loggerFactory) { }
+        public KestrelServer(Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions> options, System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Connections.IConnectionListenerFactory> transportFactories, System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Connections.IMultiplexedConnectionListenerFactory> multiplexedFactories, Microsoft.Extensions.Logging.ILoggerFactory loggerFactory) { }
         public Microsoft.AspNetCore.Http.Features.IFeatureCollection Features { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } }
         public Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions Options { get { throw null; } }
         public void Dispose() { }
@@ -100,6 +109,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
     {
         public KestrelServerLimits() { }
         public Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits Http2 { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } }
+        public Microsoft.AspNetCore.Server.Kestrel.Core.Http3Limits Http3 { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } }
         public System.TimeSpan KeepAliveTimeout { get { throw null; } set { } }
         public long? MaxConcurrentConnections { get { throw null; } set { } }
         public long? MaxConcurrentUpgradedConnections { get { throw null; } set { } }
@@ -121,6 +131,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         public System.IServiceProvider ApplicationServices { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
         public Microsoft.AspNetCore.Server.Kestrel.KestrelConfigurationLoader ConfigurationLoader { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
         public bool DisableStringReuse { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
+        public bool EnableAltSvc { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
         public Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerLimits Limits { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } }
         public Microsoft.AspNetCore.Server.Kestrel.KestrelConfigurationLoader Configure() { throw null; }
         public Microsoft.AspNetCore.Server.Kestrel.KestrelConfigurationLoader Configure(Microsoft.Extensions.Configuration.IConfiguration config) { throw null; }
@@ -139,7 +150,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         public void ListenUnixSocket(string socketPath) { }
         public void ListenUnixSocket(string socketPath, System.Action<Microsoft.AspNetCore.Server.Kestrel.Core.ListenOptions> configure) { }
     }
-    public partial class ListenOptions : Microsoft.AspNetCore.Connections.IConnectionBuilder
+    public partial class ListenOptions : Microsoft.AspNetCore.Connections.IConnectionBuilder, Microsoft.AspNetCore.Connections.IMultiplexedConnectionBuilder
     {
         internal ListenOptions() { }
         public System.IServiceProvider ApplicationServices { get { throw null; } }
@@ -149,6 +160,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         public Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols Protocols { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
         public string SocketPath { get { throw null; } }
         public Microsoft.AspNetCore.Connections.ConnectionDelegate Build() { throw null; }
+        Microsoft.AspNetCore.Connections.MultiplexedConnectionDelegate Microsoft.AspNetCore.Connections.IMultiplexedConnectionBuilder.Build() { throw null; }
+        Microsoft.AspNetCore.Connections.IMultiplexedConnectionBuilder Microsoft.AspNetCore.Connections.IMultiplexedConnectionBuilder.Use(System.Func<Microsoft.AspNetCore.Connections.MultiplexedConnectionDelegate, Microsoft.AspNetCore.Connections.MultiplexedConnectionDelegate> middleware) { throw null; }
         public override string ToString() { throw null; }
         public Microsoft.AspNetCore.Connections.IConnectionBuilder Use(System.Func<Microsoft.AspNetCore.Connections.ConnectionDelegate, Microsoft.AspNetCore.Connections.ConnectionDelegate> middleware) { throw null; }
     }
@@ -204,6 +217,13 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
         Custom = (byte)9,
         None = (byte)255,
     }
+    public partial class HttpParser<TRequestHandler> where TRequestHandler : Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.IHttpHeadersHandler, Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.IHttpRequestLineHandler
+    {
+        public HttpParser() { }
+        public HttpParser(bool showErrorDetails) { }
+        public bool ParseHeaders(TRequestHandler handler, ref System.Buffers.SequenceReader<byte> reader) { throw null; }
+        public bool ParseRequestLine(TRequestHandler handler, in System.Buffers.ReadOnlySequence<byte> buffer, out System.SequencePosition consumed, out System.SequencePosition examined) { throw null; }
+    }
     public enum HttpScheme
     {
         Unknown = -1,
@@ -216,6 +236,14 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
         Http10 = 0,
         Http11 = 1,
         Http2 = 2,
+        Http3 = 3,
+    }
+    public partial interface IHttpHeadersHandler
+    {
+        void OnHeader(System.ReadOnlySpan<byte> name, System.ReadOnlySpan<byte> value);
+        void OnHeadersComplete(bool endStream);
+        void OnStaticIndexedHeader(int index);
+        void OnStaticIndexedHeader(int index, System.ReadOnlySpan<byte> value);
     }
     public partial interface IHttpRequestLineHandler
     {

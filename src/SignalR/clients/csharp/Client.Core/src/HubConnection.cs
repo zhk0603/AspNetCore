@@ -539,7 +539,7 @@ namespace Microsoft.AspNetCore.SignalR.Client
         /// </returns>
         public IAsyncEnumerable<TResult> StreamAsyncCore<TResult>(string methodName, object[] args, CancellationToken cancellationToken = default)
         {
-            var cts = cancellationToken.CanBeCanceled ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, default) : new CancellationTokenSource();
+            var cts = cancellationToken.CanBeCanceled ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken) : new CancellationTokenSource();
             var stream = CastIAsyncEnumerable<TResult>(methodName, args, cts);
             var cancelableStream = AsyncEnumerableAdapters.MakeCancelableTypedAsyncEnumerable(stream, cts);
             return cancelableStream;
@@ -1214,11 +1214,13 @@ namespace Microsoft.AspNetCore.SignalR.Client
             finally
             {
                 invocationMessageChannel.Writer.TryComplete();
-                await invocationMessageReceiveTask;
                 timer.Stop();
                 await timerTask;
                 uploadStreamSource.Cancel();
                 await HandleConnectionClose(connectionState);
+
+                // await after the connection has been closed, otherwise could deadlock on a user's .On callback(s)
+                await invocationMessageReceiveTask;
             }
         }
 

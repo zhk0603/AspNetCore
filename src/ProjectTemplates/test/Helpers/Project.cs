@@ -10,7 +10,9 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Internal;
 using Microsoft.Extensions.CommandLineUtils;
+using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
@@ -25,11 +27,11 @@ namespace Templates.Test.Helpers
         public static bool IsCIEnvironment => typeof(Project).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
             .Any(a => a.Key == "ContinuousIntegrationBuild");
 
-        public static string ArtifactsLogDir => (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HELIX_DIR"))) 
+        public static string ArtifactsLogDir => (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HELIX_WORKITEM_UPLOAD_ROOT")))
             ? GetAssemblyMetadata("ArtifactsLogDir")
-            : Path.Combine(Environment.GetEnvironmentVariable("HELIX_DIR"), "logs");
-        
-        public static string DotNetEfFullPath => (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DotNetEfFullPath"))) 
+            : Environment.GetEnvironmentVariable("HELIX_WORKITEM_UPLOAD_ROOT");
+
+        public static string DotNetEfFullPath => (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DotNetEfFullPath")))
             ? typeof(ProjectFactoryFixture).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
                 .First(attribute => attribute.Key == "DotNetEfFullPath")
                 .Value
@@ -206,7 +208,7 @@ namespace Templates.Test.Helpers
             return new AspNetProcess(Output, TemplateClientReleaseDir, projectDll, environment);
         }
 
-        internal AspNetProcess StartBuiltProjectAsync(bool hasListeningUri = true)
+        internal AspNetProcess StartBuiltProjectAsync(bool hasListeningUri = true, ILogger logger = null)
         {
             var environment = new Dictionary<string, string>
             {
@@ -219,7 +221,7 @@ namespace Templates.Test.Helpers
             };
 
             var projectDll = Path.Combine(TemplateBuildDir, $"{ProjectName}.dll");
-            return new AspNetProcess(Output, TemplateOutputDir, projectDll, environment, hasListeningUri: hasListeningUri);
+            return new AspNetProcess(Output, TemplateOutputDir, projectDll, environment, hasListeningUri: hasListeningUri, logger: logger);
         }
 
         internal AspNetProcess StartPublishedProjectAsync(bool hasListeningUri = true)
@@ -307,7 +309,7 @@ namespace Templates.Test.Helpers
         internal async Task<ProcessEx> RunDotNetEfCreateMigrationAsync(string migrationName)
         {
             var args = $"--verbose --no-build migrations add {migrationName}";
-            
+
             // Only run one instance of 'dotnet new' at once, as a workaround for
             // https://github.com/aspnet/templating/issues/63
             await DotNetNewLock.WaitAsync();
@@ -322,7 +324,7 @@ namespace Templates.Test.Helpers
                 {
                     command = "dotnet-ef";
                 }
-                
+
                 var result = ProcessEx.Run(Output, TemplateOutputDir, command, args);
                 await result.Exited;
                 return result;
@@ -351,7 +353,7 @@ namespace Templates.Test.Helpers
                 {
                     command = "dotnet-ef";
                 }
-                
+
                 var result = ProcessEx.Run(Output, TemplateOutputDir, command, args);
                 await result.Exited;
                 return result;

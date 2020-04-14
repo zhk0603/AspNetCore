@@ -24,8 +24,9 @@ namespace Templates.Test
 
         public Project Project { get; private set; }
 
-        [ConditionalFact]
+        [ConditionalFact(Skip = "This test ran for over an hour")]
         [SkipOnHelix("selenium")]
+        [QuarantinedTest("https://github.com/dotnet/aspnetcore/issues/20172")]
         public async Task BlazorServerTemplateWorks_NoAuth()
         {
             Project = await ProjectFactory.GetOrCreateProject("blazorservernoauth", Output);
@@ -80,10 +81,11 @@ namespace Templates.Test
             }
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "See: https://github.com/dotnet/aspnetcore/issues/20520")]
         [InlineData(true)]
         [InlineData(false)]
         [SkipOnHelix("ef restore no worky")]
+        [QuarantinedTest]
         public async Task BlazorServerTemplateWorks_IndividualAuth(bool useLocalDB)
         {
             Project = await ProjectFactory.GetOrCreateProject("blazorserverindividual" + (useLocalDB ? "uld" : ""), Output);

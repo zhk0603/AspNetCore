@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -129,7 +129,7 @@ namespace Microsoft.Extensions.Diagnostics.HealthChecks
             };
 
             var service = CreateService(publishers);
-            
+
             try
             {
                 await service.StartAsync();
@@ -145,7 +145,7 @@ namespace Microsoft.Extensions.Diagnostics.HealthChecks
                 await service.StopAsync(); // Trigger cancellation
 
                 // Assert
-                await AssertCancelledAsync(publishers[0].Entries[0].cancellationToken);
+                await AssertCanceledAsync(publishers[0].Entries[0].cancellationToken);
                 Assert.False(service.IsTimerRunning);
                 Assert.True(service.IsStopping);
 
@@ -214,7 +214,7 @@ namespace Microsoft.Extensions.Diagnostics.HealthChecks
                 entry => { Assert.Contains(entry.EventId, new[] { DefaultHealthCheckService.EventIds.HealthCheckBegin, DefaultHealthCheckService.EventIds.HealthCheckEnd }); },
                 entry => { Assert.Contains(entry.EventId, new[] { DefaultHealthCheckService.EventIds.HealthCheckBegin, DefaultHealthCheckService.EventIds.HealthCheckEnd }); },
                 entry => { Assert.Equal(DefaultHealthCheckService.EventIds.HealthCheckEnd, entry.EventId); },
-                entry => { Assert.Equal(DefaultHealthCheckService.EventIds.HealthCheckProcessingEnd, entry.EventId); }, 
+                entry => { Assert.Equal(DefaultHealthCheckService.EventIds.HealthCheckProcessingEnd, entry.EventId); },
                 entry => { Assert.Equal(HealthCheckPublisherHostedService.EventIds.HealthCheckPublisherBegin, entry.EventId); },
                 entry => { Assert.Equal(HealthCheckPublisherHostedService.EventIds.HealthCheckPublisherEnd, entry.EventId); },
                 entry => { Assert.Equal(HealthCheckPublisherHostedService.EventIds.HealthCheckPublisherProcessingEnd, entry.EventId); });
@@ -274,6 +274,7 @@ namespace Microsoft.Extensions.Diagnostics.HealthChecks
         }
 
         [Fact]
+        [QuarantinedTest]
         public async Task RunAsync_PublishersCanTimeout()
         {
             // Arrange
@@ -285,10 +286,7 @@ namespace Microsoft.Extensions.Diagnostics.HealthChecks
                 new TestPublisher() { Wait = unblock.Task, },
             };
 
-            var service = CreateService(publishers, sink: sink, configure: (options) =>
-            {
-                options.Timeout = TimeSpan.FromMilliseconds(50);
-            });
+            var service = CreateService(publishers, sink: sink);
 
             try
             {
@@ -299,7 +297,9 @@ namespace Microsoft.Extensions.Diagnostics.HealthChecks
 
                 await publishers[0].Started.TimeoutAfter(TimeSpan.FromSeconds(10));
 
-                await AssertCancelledAsync(publishers[0].Entries[0].cancellationToken);
+                service.CancelToken();
+
+                await AssertCanceledAsync(publishers[0].Entries[0].cancellationToken);
 
                 unblock.SetResult(null);
 
@@ -440,7 +440,7 @@ namespace Microsoft.Extensions.Diagnostics.HealthChecks
         }
 
         private HealthCheckPublisherHostedService CreateService(
-            IHealthCheckPublisher[] publishers, 
+            IHealthCheckPublisher[] publishers,
             Action<HealthCheckPublisherOptions> configure = null,
             TestSink sink = null)
         {
@@ -482,7 +482,7 @@ namespace Microsoft.Extensions.Diagnostics.HealthChecks
             return services.GetServices<IHostedService>().OfType< HealthCheckPublisherHostedService>().Single();
         }
 
-        private static async Task AssertCancelledAsync(CancellationToken cancellationToken)
+        private static async Task AssertCanceledAsync(CancellationToken cancellationToken)
         {
             await Assert.ThrowsAsync<TaskCanceledException>(() => Task.Delay(TimeSpan.FromSeconds(10), cancellationToken));
         }

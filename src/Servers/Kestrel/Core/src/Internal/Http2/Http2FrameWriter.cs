@@ -38,6 +38,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
         private readonly ITimeoutControl _timeoutControl;
         private readonly MinDataRate _minResponseDataRate;
         private readonly TimingPipeFlusher _flusher;
+        private readonly HPackEncoder _hpackEncoder;
 
         private uint _maxFrameSize = Http2PeerSettings.MinAllowedMaxFrameSize;
         private byte[] _headerEncodingBuffer;
@@ -55,7 +56,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
             MinDataRate minResponseDataRate,
             string connectionId,
             MemoryPool<byte> memoryPool,
-            IKestrelTrace log)
+            ServiceContext serviceContext)
         {
             // Allow appending more data to the PipeWriter when a flush is pending.
             _outputWriter = new ConcurrentPipeWriter(outputPipeWriter, memoryPool, _writeLock);
@@ -63,12 +64,22 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
             _http2Connection = http2Connection;
             _connectionOutputFlowControl = connectionOutputFlowControl;
             _connectionId = connectionId;
-            _log = log;
+            _log = serviceContext.Log;
             _timeoutControl = timeoutControl;
             _minResponseDataRate = minResponseDataRate;
-            _flusher = new TimingPipeFlusher(_outputWriter, timeoutControl, log);
+            _flusher = new TimingPipeFlusher(_outputWriter, timeoutControl, serviceContext.Log);
             _outgoingFrame = new Http2Frame();
             _headerEncodingBuffer = new byte[_maxFrameSize];
+
+            _hpackEncoder = new HPackEncoder(serviceContext.ServerOptions.AllowResponseHeaderCompression);
+        }
+
+        public void UpdateMaxHeaderTableSize(uint maxHeaderTableSize)
+        {
+            lock (_writeLock)
+            {
+                _hpackEncoder.UpdateMaxHeaderTableSize(maxHeaderTableSize);
+            }
         }
 
         public void UpdateMaxFrameSize(uint maxFrameSize)
@@ -175,7 +186,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
                     _headersEnumerator.Initialize(headers);
                     _outgoingFrame.PrepareHeaders(headerFrameFlags, streamId);
                     var buffer = _headerEncodingBuffer.AsSpan();
-                    var done = HPackHeaderWriter.BeginEncodeHeaders(statusCode, _headersEnumerator, buffer, out var payloadLength);
+                    var done = HPackHeaderWriter.BeginEncodeHeaders(statusCode, _hpackEncoder, _headersEnumerator, buffer, out var payloadLength);
                     FinishWritingHeaders(streamId, payloadLength, done);
                 }
                 catch (HPackEncodingException hex)
@@ -201,7 +212,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
                     _headersEnumerator.Initialize(headers);
                     _outgoingFrame.PrepareHeaders(Http2HeadersFrameFlags.END_STREAM, streamId);
                     var buffer = _headerEncodingBuffer.AsSpan();
-                    var done = HPackHeaderWriter.BeginEncodeHeaders(_headersEnumerator, buffer, out var payloadLength);
+                    var done = HPackHeaderWriter.BeginEncodeHeaders(_hpackEncoder, _headersEnumerator, buffer, out var payloadLength);
                     FinishWritingHeaders(streamId, payloadLength, done);
                 }
                 catch (HPackEncodingException hex)
@@ -230,7 +241,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
             {
                 _outgoingFrame.PrepareContinuation(Http2ContinuationFrameFlags.NONE, streamId);
 
-                done = HPackHeaderWriter.ContinueEncodeHeaders(_headersEnumerator, buffer, out payloadLength);
+                done = HPackHeaderWriter.ContinueEncodeHeaders(_hpackEncoder, _headersEnumerator, buffer, out payloadLength);
                 _outgoingFrame.PayloadLength = payloadLength;
 
                 if (done)
@@ -365,7 +376,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
 
             while (dataLength > 0)
             {
-                OutputFlowControlAwaitable availabilityAwaitable;
+                ValueTask<object> availabilityTask;
                 var writeTask = default(ValueTask<FlushResult>);
 
                 lock (_writeLock)
@@ -375,7 +386,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
                         break;
                     }
 
-                    var actual = flowControl.AdvanceUpToAndWait(dataLength, out availabilityAwaitable);
+                    var actual = flowControl.AdvanceUpToAndWait(dataLength, out availabilityTask);
 
                     if (actual > 0)
                     {
@@ -405,7 +416,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
                 }
 
                 // Avoid timing writes that are already complete. This is likely to happen during the last iteration.
-                if (availabilityAwaitable == null && writeTask.IsCompleted)
+                if (availabilityTask.IsCompleted && writeTask.IsCompleted)
                 {
                     continue;
                 }
@@ -417,9 +428,9 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
 
                 // This awaitable releases continuations in FIFO order when the window updates.
                 // It should be very rare for a continuation to run without any availability.
-                if (availabilityAwaitable != null)
+                if (!availabilityTask.IsCompleted)
                 {
-                    await availabilityAwaitable;
+                    await availabilityTask;
                 }
 
                 flushResult = await writeTask;
